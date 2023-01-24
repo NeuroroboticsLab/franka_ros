@@ -1,8 +1,10 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
-#include <franka_example_controllers/joint_position_example_controller.h>
+#include <franka_example_controllers/joint_position_controller.h>
 
 #include <cmath>
+#include <thread>
+#include <chrono>
 
 #include <controller_interface/controller_base.h>
 #include <hardware_interface/hardware_interface.h>
@@ -12,20 +14,19 @@
 
 namespace franka_example_controllers {
 
-bool JointPositionExampleController::init(hardware_interface::RobotHW* robot_hardware,
-                                          ros::NodeHandle& node_handle) {
+bool JointPositionController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
   if (position_joint_interface_ == nullptr) {
     ROS_ERROR(
-        "JointPositionExampleController: Error getting position joint interface from hardware!");
+        "JointPositionController: Error getting position joint interface from hardware!");
     return false;
   }
   std::vector<std::string> joint_names;
   if (!node_handle.getParam("joint_names", joint_names)) {
-    ROS_ERROR("JointPositionExampleController: Could not parse joint names");
+    ROS_ERROR("JointPositionController: Could not parse joint names");
   }
   if (joint_names.size() != 7) {
-    ROS_ERROR_STREAM("JointPositionExampleController: Wrong number of joint names, got "
+    ROS_ERROR_STREAM("JointPositionController: Wrong number of joint names, got "
                      << joint_names.size() << " instead of 7 names!");
     return false;
   }
@@ -35,47 +36,80 @@ bool JointPositionExampleController::init(hardware_interface::RobotHW* robot_har
       position_joint_handles_[i] = position_joint_interface_->getHandle(joint_names[i]);
     } catch (const hardware_interface::HardwareInterfaceException& e) {
       ROS_ERROR_STREAM(
-          "JointPositionExampleController: Exception getting joint handles: " << e.what());
+          "JointPositionController: Exception getting joint handles: " << e.what());
       return false;
     }
   }
 
-  std::array<double, 7> q_start{{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-  for (size_t i = 0; i < q_start.size(); i++) {
-    if (std::abs(position_joint_handles_[i].getPosition() - q_start[i]) > 0.1) {
-      ROS_ERROR_STREAM(
-          "JointPositionExampleController: Robot is not in the expected starting position for "
-          "running this example. Run `roslaunch franka_example_controllers move_to_start.launch "
-          "robot_ip:=<robot-ip> load_gripper:=<has-attached-gripper>` first.");
-      return false;
-    }
-  }
+  ros::NodeHandle n;
+  sub = n.subscribe("desired_joints", 5, &JointPositionController::jointsCallback, this);
 
   return true;
-}
+} 
 
-void JointPositionExampleController::starting(const ros::Time& /* time */) {
-  for (size_t i = 0; i < 7; ++i) {
+void JointPositionController::starting(const ros::Time& /* time */) {
+  for (size_t i = 0; i < 7; ++i) 
     initial_pose_[i] = position_joint_handles_[i].getPosition();
-  }
-  elapsed_time_ = ros::Duration(0.0);
 }
 
-void JointPositionExampleController::update(const ros::Time& /*time*/,
-                                            const ros::Duration& period) {
-  elapsed_time_ += period;
-
-  double delta_angle = M_PI / 16 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec())) * 0.2;
-  for (size_t i = 0; i < 7; ++i) {
-    if (i == 4) {
-      position_joint_handles_[i].setCommand(initial_pose_[i] - delta_angle);
-    } else {
-      position_joint_handles_[i].setCommand(initial_pose_[i] + delta_angle);
-    }
+void JointPositionController::update(const ros::Time& /*time*/, const ros::Duration& period) {
+  double cur, diff;
+  for (size_t index = 0; index < 7; ++index) { 
+      cur = position_joint_handles_[index].getPosition();
+      diff = pd(m_qGoal[index], cur, index);
+      position_joint_handles_[index].setCommand(cur + diff);
   }
+}
+
+double JointPositionController::pd(double target, double current, size_t index) {
+  double error = target - current;
+    
+  double pOut = m_kp * error; // Proportional term
+
+  // Integral term
+  m_integral[index] += error * m_dt;
+  double iOut = m_ki * m_integral[index];
+
+  // Derivative term
+  double derivative = (error - m_preError[index]) / m_dt;
+  double dOut = m_kd * derivative;
+    
+  double output = pOut + iOut + dOut; // Calculate total output
+
+  // Restrict to max/min
+  if(output > m_max)
+    output = m_max;
+  else if(output < -m_max)
+    output = -m_max;
+  // do net restrict minimal value
+
+  m_preError[index] = error; // Save error to previous error
+
+  return output;
+}
+
+void JointPositionController::jointsCallback(const sensor_msgs::JointState::ConstPtr& msg)
+{
+  for (auto tag : msg->name)
+    ROS_INFO("I heard: [%s]", tag.c_str());
+
+  // check the limits
+  if (msg->position.size() != 7 || msg->name.size() != 7) {
+    ROS_WARN("Wrong input dimension");
+    return;
+  }
+
+  const auto &pos = msg->position;
+  for (size_t i = 0; i < 7; ++i)
+    if (pos[i] < m_minJointLimits[i] || m_maxJointLimits[i] < pos[i]) {
+      ROS_WARN("Out of limits of joint [%i]", static_cast<int>(i));
+      return;
+    }
+
+  m_qGoal = pos;
 }
 
 }  // namespace franka_example_controllers
 
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::JointPositionExampleController,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::JointPositionController,
                        controller_interface::ControllerBase)

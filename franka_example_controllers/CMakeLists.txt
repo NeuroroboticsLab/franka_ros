@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   franka_hw
   franka_gripper
   geometry_msgs
+  sensor_msgs
   hardware_interface
   joint_limits_interface
   tf
@@ -40,9 +41,6 @@ generate_messages()
 generate_dynamic_reconfigure_options(
   cfg/compliance_param.cfg
   cfg/desired_mass_param.cfg
-  cfg/dual_arm_compliance_param.cfg
-  cfg/teleop_param.cfg
-  cfg/teleop_gripper_param.cfg
 )
 
 catkin_package(
@@ -55,6 +53,7 @@ catkin_package(
     franka_hw
     franka_gripper
     geometry_msgs
+    sensor_msgs
     hardware_interface
     joint_limits_interface
     tf
@@ -69,18 +68,15 @@ catkin_package(
 )
 
 add_library(franka_example_controllers
-  src/elbow_example_controller.cpp
   src/cartesian_pose_example_controller.cpp
   src/cartesian_velocity_example_controller.cpp
   src/joint_position_example_controller.cpp
   src/joint_velocity_example_controller.cpp
-  src/model_example_controller.cpp
   src/joint_impedance_example_controller.cpp
   src/cartesian_impedance_example_controller.cpp
   src/force_example_controller.cpp
-  src/dual_arm_cartesian_impedance_example_controller.cpp
-  src/teleop_joint_pd_example_controller.cpp
-  src/joint_wall.cpp
+        src/cartesian_impedance_controller.cpp
+        src/joint_position_controller.cpp
 )
 
 add_dependencies(franka_example_controllers
@@ -105,24 +101,6 @@ target_include_directories(franka_example_controllers PUBLIC
   include
 )
 
-add_executable(teleop_gripper_node
-  src/teleop_gripper_node.cpp
-)
-target_include_directories(teleop_gripper_node PUBLIC
-  ${catkin_INCLUDE_DIRS}
-)
-target_link_libraries(teleop_gripper_node PUBLIC
-  ${Franka_LIBRARIES}
-  ${catkin_LIBRARIES}
-)
-add_dependencies(teleop_gripper_node
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-  ${PROJECT_NAME}_generate_messages_cpp
-  ${PROJECT_NAME}_gencpp
-  ${PROJECT_NAME}_gencfg
-)
-
 ## Installation
 install(TARGETS franka_example_controllers
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -142,7 +120,7 @@ install(FILES franka_example_controllers_plugin.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 catkin_install_python(
-  PROGRAMS scripts/interactive_marker.py scripts/move_to_start.py scripts/dual_arm_interactive_marker.py
+  PROGRAMS scripts/interactive_marker.py scripts/move_to_start.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
