@@ -34,6 +34,7 @@ bool JointPositionController::init(hardware_interface::RobotHW* robot_hardware, 
   for (size_t i = 0; i < 7; ++i) {
     try {
       position_joint_handles_[i] = position_joint_interface_->getHandle(joint_names[i]);
+      m_qGoal[i] = position_joint_handles_[i].getPosition();
     } catch (const hardware_interface::HardwareInterfaceException& e) {
       ROS_ERROR_STREAM(
           "JointPositionController: Exception getting joint handles: " << e.what());
@@ -56,12 +57,12 @@ void JointPositionController::update(const ros::Time& /*time*/, const ros::Durat
   double cur, diff;
   for (size_t index = 0; index < 7; ++index) { 
       cur = position_joint_handles_[index].getPosition();
-      diff = pd(m_qGoal[index], cur, index);
+      diff = pid(m_qGoal[index], cur, index);
       position_joint_handles_[index].setCommand(cur + diff);
   }
 }
 
-double JointPositionController::pd(double target, double current, size_t index) {
+double JointPositionController::pid(double target, double current, size_t index) {
   double error = target - current;
     
   double pOut = m_kp * error; // Proportional term
@@ -81,20 +82,24 @@ double JointPositionController::pd(double target, double current, size_t index) 
     output = m_max;
   else if(output < -m_max)
     output = -m_max;
-  // do net restrict minimal value
+  else if(std::abs(output) < m_min)
+    output = 0;
 
   m_preError[index] = error; // Save error to previous error
+  
+  auto diff = m_lastOutput[index] - output ;
+  if (output != 0 && std::abs(error) > 0.01) 
+    if (std::abs(diff) > 0.001 || m_lastOutput[index] == 0)
+      m_lastOutput[index] = m_lastOutput[index] + diff * m_accScale;
+  m_lastOutput[index] = output; // Save to last output
 
   return output;
 }
 
 void JointPositionController::jointsCallback(const sensor_msgs::JointState::ConstPtr& msg)
 {
-  for (auto tag : msg->name)
-    ROS_INFO("I heard: [%s]", tag.c_str());
-
   // check the limits
-  if (msg->position.size() != 7 || msg->name.size() != 7) {
+  if (msg->position.size() < 7 || msg->position.size() > 9) {
     ROS_WARN("Wrong input dimension");
     return;
   }
@@ -106,6 +111,17 @@ void JointPositionController::jointsCallback(const sensor_msgs::JointState::Cons
       return;
     }
 
+  // check the difference
+  double diff = 0;
+  for (size_t i = 0; i < 7; ++i)
+    diff += std::abs(pos[i] - m_qGoal[i]);
+  if (diff > 1) {
+    ROS_INFO("reset the integral and error term");
+    m_preError = std::vector<double>(7, 0);
+    m_integral = std::vector<double>(7, 0);
+    m_lastOutput = std::vector<double>(7, 0);
+  }
+  
   m_qGoal = pos;
 }
 

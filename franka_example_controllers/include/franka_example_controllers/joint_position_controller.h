@@ -23,7 +23,7 @@ class JointPositionController : public controller_interface::MultiInterfaceContr
   void starting(const ros::Time&) override;
   void update(const ros::Time&, const ros::Duration& period) override;
   void jointsCallback(const sensor_msgs::JointState::ConstPtr& msg);
-  double pd(double target, double current, size_t index);
+  double pid(double target, double current, size_t index);
 
  private:
   hardware_interface::PositionJointInterface* position_joint_interface_;
@@ -32,19 +32,23 @@ class JointPositionController : public controller_interface::MultiInterfaceContr
 
   ros::Subscriber sub;
 
+
   std::vector<double> m_qGoal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4};
   // joint limits are set smaller than them of the real robot
   std::vector<double> m_minJointLimits = {-2.6437, -1.6837, -2.8007, -2.9421, -2.7065, 0.4445, -2.9159};
   std::vector<double> m_maxJointLimits = {2.6437, 1.6837, 2.8007, -0.0518, 2.7065, 4.4169, 2.9159};
 
   double m_dt = 0.001;
-  double m_max = 0.0005;
-  double m_min = 0.0000000001;
-  double m_kp = 0.002;
-  double m_kd = 0.0001;
-  double m_ki = 0.0001;
+  double m_max = 0.0001;
+  double m_min = 0.000000001;
+  double m_kp = 0.0005;
+  double m_kd = 0.0003;
+  double m_ki = 0.00007;
+  double m_accScale = 0.1;
+
   std::vector<double> m_preError  = std::vector<double>(7, 0);
   std::vector<double> m_integral  = std::vector<double>(7, 0);
+  std::vector<double> m_lastOutput  = std::vector<double>(7, 0);
 };
 
 }  // namespace franka_example_controllers

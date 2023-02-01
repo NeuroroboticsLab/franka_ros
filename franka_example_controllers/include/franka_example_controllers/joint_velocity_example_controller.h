@@ -11,6 +11,7 @@
 #include <hardware_interface/robot_hw.h>
 #include <ros/node_handle.h>
 #include <ros/time.h>
+#include <sensor_msgs/JointState.h>
 
 namespace franka_example_controllers {
 
@@ -24,9 +25,27 @@ class JointVelocityExampleController : public controller_interface::MultiInterfa
   void stopping(const ros::Time&) override;
 
  private:
+  void jointsCallback(const sensor_msgs::JointState::ConstPtr& msg);
+  double pid(double target, double current, size_t index);
+
   hardware_interface::VelocityJointInterface* velocity_joint_interface_;
   std::vector<hardware_interface::JointHandle> velocity_joint_handles_;
   ros::Duration elapsed_time_;
+
+  double m_dt = 0.001;
+  double m_max = 2.5;
+  double m_min = 0.000000001;
+  double m_kp = 0.6;
+  double m_kd = 0.001;
+  double m_ki = 0.0005;
+  double m_accScale = 0.1;
+
+  ros::Subscriber sub;
+  std::vector<double> m_qGoal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4};
+
+  std::vector<double> m_preError  = std::vector<double>(7, 0);
+  std::vector<double> m_integral  = std::vector<double>(7, 0);
+  std::vector<double> m_lastOutput  = std::vector<double>(7, 0);
 };
 
 }  // namespace franka_example_controllers
