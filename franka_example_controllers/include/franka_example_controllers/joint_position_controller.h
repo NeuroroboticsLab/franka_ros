@@ -35,8 +35,12 @@ class JointPositionController : public controller_interface::MultiInterfaceContr
 
   std::vector<double> m_qGoal = {0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4};
   // joint limits are set smaller than them of the real robot
-  std::vector<double> m_minJointLimits = {-2.6437, -1.6837, -2.8007, -2.9421, -2.7065, 0.4445, -2.9159};
-  std::vector<double> m_maxJointLimits = {2.6437, 1.6837, 2.8007, -0.0518, 2.7065, 4.4169, 2.9159};
+  std::vector<double> m_minLimitsFR3 = {-2.6437, -1.6837, -2.8007, -2.9421, -2.7065, 0.4445, -2.9159};
+  std::vector<double> m_maxLimitsFR3 = {2.6437, 1.6837, 2.8007, -0.0518, 2.7065, 4.4169, 2.9159};
+  std::vector<double> m_maxLimitsPanda = {2.7973, 1.6628, 2.7973, 0, 2.8973, 3.6525, 2.7973};
+  std::vector<double> m_minLimitsPanda = {-2.7973, -1.6628, -2.7973, -2.9718, -2.7973, 0.1, -2.7973};
+  std::vector<double> m_minLimits = {-2.6437, -1.6837, -2.8007, -2.9421, -2.7065, 0.4445, -2.9159};
+  std::vector<double> m_maxLimits = {2.6437, 1.6837, 2.8007, -0.0518, 2.7065, 4.4169, 2.9159};
 
   double m_dt = 0.001;
   double m_max = 0.0001;

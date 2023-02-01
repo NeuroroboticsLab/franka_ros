@@ -21,6 +21,23 @@ bool JointPositionController::init(hardware_interface::RobotHW* robot_hardware, 
         "JointPositionController: Error getting position joint interface from hardware!");
     return false;
   }
+
+  std::string arm_id;
+  if (!node_handle.getParam("arm_id", arm_id)) {
+    ROS_ERROR("JointVelocityExampleController: Could not get parameter arm_id");
+    return false;
+  }
+  if (arm_id == "panda" || arm_id == "panda_sim") {
+      m_minLimits = m_minLimitsPanda;
+      m_maxLimits = m_maxLimitsPanda;
+    } else if (arm_id == "fr3" || arm_id == "fr3_sim") {
+      m_minLimits = m_minLimitsFR3;
+      m_maxLimits = m_maxLimitsFR3;
+    } else {
+      ROS_ERROR("JointVelocityExampleController: Unknown arm_id %s", arm_id.c_str());
+      return false;
+  }
+
   std::vector<std::string> joint_names;
   if (!node_handle.getParam("joint_names", joint_names)) {
     ROS_ERROR("JointPositionController: Could not parse joint names");
@@ -106,7 +123,7 @@ void JointPositionController::jointsCallback(const sensor_msgs::JointState::Cons
 
   const auto &pos = msg->position;
   for (size_t i = 0; i < 7; ++i)
-    if (pos[i] < m_minJointLimits[i] || m_maxJointLimits[i] < pos[i]) {
+    if (pos[i] < m_minLimits[i] || m_maxLimits[i] < pos[i]) {
       ROS_WARN("Out of limits of joint [%i]", static_cast<int>(i));
       return;
     }

@@ -28,6 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 find_package(Franka 0.9.0 QUIET)
+
 if(NOT Franka_FOUND)
   find_package(Franka 0.8.0 REQUIRED)
 endif()
@@ -47,23 +48,23 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES franka_example_controllers
   CATKIN_DEPENDS
-    controller_interface
-    dynamic_reconfigure
-    eigen_conversions
-    franka_hw
-    franka_gripper
-    geometry_msgs
-    sensor_msgs
-    hardware_interface
-    joint_limits_interface
-    tf
-    tf_conversions
-    message_runtime
-    pluginlib
-    realtime_tools
-    roscpp
-    urdf
-    visualization_msgs
+  controller_interface
+  dynamic_reconfigure
+  eigen_conversions
+  franka_hw
+  franka_gripper
+  geometry_msgs
+  sensor_msgs
+  hardware_interface
+  joint_limits_interface
+  tf
+  tf_conversions
+  message_runtime
+  pluginlib
+  realtime_tools
+  roscpp
+  urdf
+  visualization_msgs
   DEPENDS Franka
 )
 
@@ -75,8 +76,9 @@ add_library(franka_example_controllers
   src/joint_impedance_example_controller.cpp
   src/cartesian_impedance_example_controller.cpp
   src/force_example_controller.cpp
-        src/cartesian_impedance_controller.cpp
-        src/joint_position_controller.cpp
+  src/cartesian_impedance_controller.cpp
+  src/joint_position_controller.cpp
+  src/joint_velocity_controller.cpp
 )
 
 add_dependencies(franka_example_controllers
@@ -101,7 +103,7 @@ target_include_directories(franka_example_controllers PUBLIC
   include
 )
 
-## Installation
+# # Installation
 install(TARGETS franka_example_controllers
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -124,10 +126,11 @@ catkin_install_python(
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-## Tools
+# # Tools
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ClangTools.cmake OPTIONAL
   RESULT_VARIABLE CLANG_TOOLS
 )
+
 if(CLANG_TOOLS)
   file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
   file(GLOB_RECURSE HEADERS
@@ -144,6 +147,7 @@ endif()
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/PepTools.cmake OPTIONAL
   RESULT_VARIABLE PEP_TOOLS
 )
+
 if(PEP_TOOLS)
   file(GLOB_RECURSE PYSOURCES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.py)
   add_pyformat_target(franka_control FILES ${PYSOURCES})
