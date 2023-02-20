@@ -107,3 +107,15 @@ joint_position_controller:
         - fr3_joint5
         - fr3_joint6
         - fr3_joint7
+
+joint_velocity_controller:
+    type: franka_example_controllers/JointVelocityController
+    arm_id: $(arg arm_id)
+    joint_names:
+        - fr3_joint1
+        - fr3_joint2
+        - fr3_joint3
+        - fr3_joint4
+        - fr3_joint5
+        - fr3_joint6
+        - fr3_joint7
