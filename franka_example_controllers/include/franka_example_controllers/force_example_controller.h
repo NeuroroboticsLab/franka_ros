@@ -45,7 +45,7 @@ class ForceExampleController : public controller_interface::MultiInterfaceContro
   double k_i_{0.0};
   double target_k_p_{0.0};
   double target_k_i_{0.0};
-  double filter_gain_{0.001};
+  double filter_gain_{0.001}; // 0.001
   Eigen::Matrix<double, 7, 1> tau_ext_initial_;
   Eigen::Matrix<double, 7, 1> tau_error_;
   static constexpr double kDeltaTauMax{1.0};
